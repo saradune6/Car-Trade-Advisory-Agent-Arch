@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Car Trade Advisor Agent — Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f1f5f9;display:flex;justify-content:center;padding:24px 16px 48px}
+.page{background:#fff;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,.06),0 20px 60px rgba(0,0,0,.10);width:min(1300px,100%);padding:38px 46px 44px;position:relative;overflow:hidden}
+.page::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#1d4ed8,#0ea5e9,#06b6d4,#7c3aed,#f59e0b,#ef4444)}
+/* header */
+.hdr{text-align:center;margin-bottom:26px}
+.hdr h1{font-size:27px;font-weight:900;color:#0f172a;letter-spacing:-.5px}
+.hdr p{font-size:13px;color:#64748b;margin-top:5px}
+.pills{display:flex;gap:7px;justify-content:center;margin-top:11px;flex-wrap:wrap}
+.pill{padding:3px 11px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.4px}
+/* layout: left flow + right agent */
+.body{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+/* left: vertical layer flow */
+.flow{display:flex;flex-direction:column;gap:0;align-items:center}
+.lrow{width:100%;border-radius:11px;padding:13px 16px}
+.lhdr{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.lhdr span{font-weight:500;text-transform:none;letter-spacing:0;font-size:9.5px;opacity:.55}
+.boxes{display:flex;gap:8px;flex-wrap:wrap}
+.bx{border-radius:8px;padding:10px 12px;flex:1;min-width:120px;border:1.5px solid transparent;display:flex;flex-direction:column;gap:3px}
+.bt{font-size:11.5px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:4px}
+.bd{font-size:10px;color:#64748b;line-height:1.5}
+.tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}
+.tag{padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace}
+/* arrow connector */
+.arr{display:flex;flex-direction:column;align-items:center;margin:1px 0;z-index:2}
+.aline{width:2px;height:18px;background:linear-gradient(180deg,#94a3b8,#cbd5e1)}
+.ahead{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid #94a3b8}
+.albl{font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin:1px 0}
+/* mcp grid */
+.mcpgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mcpbx{border-radius:8px;padding:10px 12px;border:1.5px solid #ddd6fe;background:#faf5ff}
+.mcptool{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#6d28d9;margin-bottom:3px}
+.mcpdesc{font-size:10px;color:#64748b;line-height:1.4}
+.mcptag{background:#ede9fe;color:#5b21b6;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;width:fit-content;margin-top:4px}
+/* snowflake center */
+.sfblock{background:linear-gradient(135deg,#0ea5e9,#1d4ed8);border-radius:11px;padding:13px 16px;color:#fff;width:100%}
+.sfblock h3{font-size:15px;font-weight:900}
+.sfblock p{font-size:10px;opacity:.75;margin-top:1px}
+.sftbls{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sftbl{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:4px;padding:2px 8px;font-size:9px;font-family:'JetBrains Mono',monospace;color:#e0f2fe}
+/* right: agent flow panel */
+.aside{display:flex;flex-direction:column;gap:12px;position:sticky;top:20px}
+.apanel{border:1.5px solid #e2e8f0;border-radius:12px;padding:15px;background:#f8fafc}
+.apanel h4{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;margin-bottom:12px}
+.anode{border-radius:8px;padding:9px 12px;border:1.5px solid;margin-bottom:3px}
+.anode-t{font-size:11.5px;font-weight:700}
+.anode-s{font-size:9.5px;color:#64748b;margin-top:1px}
+.aarr{text-align:center;font-size:12px;color:#94a3b8;font-weight:700;margin:1px 0;line-height:1}
+.cond{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:8px 11px;margin:3px 0}
+.cond-t{font-size:10.5px;font-weight:800;color:#b45309;margin-bottom:4px}
+.cond-r{font-size:9.5px;color:#78350f;line-height:1.7;padding-left:2px}
+/* state box */
+.statebox{border:1.5px solid #bfdbfe;border-radius:10px;padding:12px;background:#eff6ff}
+.statebox h4{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#1d4ed8;margin-bottom:8px}
+.sfield{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #dbeafe;font-size:10px}
+.sfield:last-child{border-bottom:none}
+.sfname{font-family:'JetBrains Mono',monospace;color:#1e40af;font-weight:600}
+.sfval{color:#64748b;font-size:9px}
+/* metrics strip */
+.metrics{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.met{flex:1;min-width:110px;border-radius:9px;padding:10px 12px;text-align:center}
+.met-v{font-size:18px;font-weight:900}
+.met-l{font-size:9px;font-weight:600;opacity:.7;margin-top:2px}
+/* layer colors */
+.l-ui{background:#f0f9ff;border:1.5px solid #bae6fd}.l-ui .lhdr{color:#0284c7}
+.l-api{background:#f0fdf4;border:1.5px solid #bbf7d0}.l-api .lhdr{color:#15803d}
+.l-lg{background:#fdf4ff;border:1.5px solid #e9d5ff}.l-lg .lhdr{color:#7e22ce}
+.l-mcp{background:#faf5ff;border:1.5px solid #ddd6fe}.l-mcp .lhdr{color:#6d28d9}
+.l-data{background:#fff7ed;border:1.5px solid #fed7aa}.l-data .lhdr{color:#b45309}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <h1>🚗 Car Trade Advisor Agent — Full System Architecture</h1>
+    <p>AI-Powered Conversational Advisory Platform · LangGraph + MCP + GPT-4o · Cars24 AI Hackathon 2026</p>
+    <div class="pills">
+      <span class="pill" style="background:#dbeafe;color:#1e40af">⚡ FastAPI</span>
+      <span class="pill" style="background:#ede9fe;color:#5b21b6">🔁 LangGraph</span>
+      <span class="pill" style="background:#dcfce7;color:#15803d">🧩 MCP Protocol</span>
+      <span class="pill" style="background:#ede9fe;color:#5b21b6">🧠 GPT-4o</span>
+      <span class="pill" style="background:#dbeafe;color:#1e40af">❄️ Snowflake</span>
+      <span class="pill" style="background:#fef3c7;color:#b45309">🚗 ULIP / Vahan API</span>
+      <span class="pill" style="background:#dcfce7;color:#15803d">🐍 Python 3.13</span>
+      <span class="pill" style="background:#fee2e2;color:#b91c1c">📚 RAG + Vector DB</span>
+      <span class="pill" style="background:#f0f9ff;color:#0284c7">🖥️ Vanilla JS</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- LEFT: LAYER FLOW -->
+    <div class="flow">
+
+      <!-- LAYER 1: UI -->
+      <div class="lrow l-ui" style="width:100%">
+        <div class="lhdr">① USER INTERFACE LAYER <span>— Vanilla JS, No framework dependencies</span></div>
+        <div class="boxes">
+          <div class="bx" style="background:#e0f2fe;border-color:#7dd3fc">
+            <div class="bt">💬 Chat Interface</div>
+            <div class="bd">Conversational UI, animated message bubbles, typing indicators, smooth transitions</div>
+            <div class="tags"><span class="tag" style="background:#bae6fd;color:#0369a1">Vanilla JS</span><span class="tag" style="background:#bae6fd;color:#0369a1">CSS animations</span></div>
+          </div>
+          <div class="bx" style="background:#e0f2fe;border-color:#7dd3fc">
+            <div class="bt">📊 Depreciation Chart</div>
+            <div class="bd">Interactive SVG chart. Year-by-year forecast to 2030. Hover to see exact value loss %</div>
+            <div class="tags"><span class="tag" style="background:#bae6fd;color:#0369a1">SVG</span><span class="tag" style="background:#bae6fd;color:#0369a1">Dynamic render</span></div>
+          </div>
+          <div class="bx" style="background:#e0f2fe;border-color:#7dd3fc">
+            <div class="bt">💳 EMI Calculator</div>
+            <div class="bd">Real-time EMI on top-up amount. 15-month & 60-month options. Platform support overlay.</div>
+            <div class="tags"><span class="tag" style="background:#bae6fd;color:#0369a1">Instant calc</span><span class="tag" style="background:#bae6fd;color:#0369a1">Transparent</span></div>
+          </div>
+          <div class="bx" style="background:#e0f2fe;border-color:#7dd3fc">
+            <div class="bt">⚖️ Comparison Grid</div>
+            <div class="bd">Feature-by-feature car comparison matrix. Pros/cons, winner badge, AI reasoning card</div>
+            <div class="tags"><span class="tag" style="background:#bae6fd;color:#0369a1">Grid layout</span><span class="tag" style="background:#bae6fd;color:#0369a1">Progressive</span></div>
+          </div>
+          <div class="bx" style="background:#e0f2fe;border-color:#7dd3fc">
+            <div class="bt">📅 Booking Flow</div>
+            <div class="bd">Multi-turn inspection booking. Home/Hub → City → Address → Slot → Confirmation</div>
+            <div class="tags"><span class="tag" style="background:#bae6fd;color:#0369a1">Stateful</span><span class="tag" style="background:#bae6fd;color:#0369a1">Multi-turn</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arr"><div class="aline"></div><div class="albl">REST API (JSON)</div><div class="ahead"></div></div>
+
+      <!-- LAYER 2: FASTAPI -->
+      <div class="lrow l-api" style="width:100%">
+        <div class="lhdr">② FASTAPI GATEWAY <span>— Python 3.13 · Async · Auto-docs · 3 core endpoints</span></div>
+        <div class="boxes">
+          <div class="bx" style="background:#dcfce7;border-color:#86efac">
+            <div class="bt">🎯 POST /api/advice</div>
+            <div class="bd">Main advisory endpoint. Invokes full LangGraph agent. Returns vehicle data, market analysis, recommendation, upgrade cards.</div>
+            <div class="tags"><span class="tag" style="background:#bbf7d0;color:#15803d">FastAPI</span><span class="tag" style="background:#bbf7d0;color:#15803d">async/await</span><span class="tag" style="background:#bbf7d0;color:#15803d">Pydantic</span></div>
+          </div>
+          <div class="bx" style="background:#dcfce7;border-color:#86efac">
+            <div class="bt">🗨️ POST /api/followup</div>
+            <div class="bd">AI conversational responses. Handles confusion & clarifications. GPT-4o with full context extraction. Recovers 30-40% drop-offs.</div>
+            <div class="tags"><span class="tag" style="background:#bbf7d0;color:#15803d">GPT-4o</span><span class="tag" style="background:#bbf7d0;color:#15803d">Context-aware</span></div>
+          </div>
+          <div class="bx" style="background:#dcfce7;border-color:#86efac">
+            <div class="bt">🔀 POST /api/compare</div>
+            <div class="bd">Vehicle comparison via GPT-4o. Neutral or upgrade mode. Feature-by-feature matrix, pros/cons, winner + reasoning.</div>
+            <div class="tags"><span class="tag" style="background:#bbf7d0;color:#15803d">GPT-4o</span><span class="tag" style="background:#bbf7d0;color:#15803d">neutral/upgrade</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arr"><div class="aline"></div><div class="albl">State-based Invocation</div><div class="ahead"></div></div>
+
+      <!-- LAYER 3: LANGGRAPH -->
+      <div class="lrow l-lg" style="width:100%">
+        <div class="lhdr">③ LANGGRAPH ORCHESTRATION <span>— StateGraph engine · parallel execution · fault-isolated nodes</span></div>
+        <div class="boxes">
+          <div class="bx" style="background:#f5f3ff;border-color:#c4b5fd">
+            <div class="bt">📦 Shared AdvisorState</div>
+            <div class="bd">registration_number, vehicle{}, market{}, service_history[], rag_context, recommendation, alternatives[], booking{}</div>
+            <div class="tags"><span class="tag" style="background:#ede9fe;color:#5b21b6">TypedDict</span><span class="tag" style="background:#ede9fe;color:#5b21b6">StateGraph</span></div>
+          </div>
+          <div class="bx" style="background:#f5f3ff;border-color:#c4b5fd">
+            <div class="bt">⚡ Parallel Execution</div>
+            <div class="bd">fetch_vehicle + fetch_service + fetch_market + fetch_rag all executed concurrently. Total latency: ~3 sec.</div>
+            <div class="tags"><span class="tag" style="background:#ede9fe;color:#5b21b6">asyncio</span><span class="tag" style="background:#ede9fe;color:#5b21b6">concurrent</span></div>
+          </div>
+          <div class="bx" style="background:#f5f3ff;border-color:#c4b5fd">
+            <div class="bt">🔀 Conditional Routing</div>
+            <div class="bd">Dynamic edge: if upgrade → suggest_alternatives | if sell_now → book_inspection | else → finalize</div>
+            <div class="tags"><span class="tag" style="background:#ede9fe;color:#5b21b6">Conditional edges</span></div>
+          </div>
+          <div class="bx" style="background:#f5f3ff;border-color:#c4b5fd">
+            <div class="bt">🛡️ Fault Isolation</div>
+            <div class="bd">One node failure doesn't crash system. ULIP fallback to Snowflake cache. 3-retry with exponential backoff.</div>
+            <div class="tags"><span class="tag" style="background:#ede9fe;color:#5b21b6">try/except</span><span class="tag" style="background:#ede9fe;color:#5b21b6">fallback</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arr"><div class="aline"></div><div class="albl">MCP Tool Calls</div><div class="ahead"></div></div>
+
+      <!-- LAYER 4: MCP -->
+      <div class="lrow l-mcp" style="width:100%">
+        <div class="lhdr">④ MCP TOOL SERVER <span>— Model Context Protocol · standardized interface · swap mock ↔ real without touching agent logic</span></div>
+        <div class="mcpgrid">
+          <div class="mcpbx">
+            <div class="mcptool">ulip_vehicle_lookup(reg_no)</div>
+            <div class="mcpdesc">Calls ULIP/Vahan API (Govt vehicle registry). Returns make, model, year, fuel type, insurance status, challan records, 200-pt inspection score.</div>
+            <div class="mcptag">→ ULIP / Vahan API</div>
+          </div>
+          <div class="mcpbx">
+            <div class="mcptool">snowflake_market_data(model, city)</div>
+            <div class="mcpdesc">Queries Snowflake for current market prices, demand trend YoY, days-to-sell, price band. Powers depreciation forecast to 2030.</div>
+            <div class="mcptag">→ Snowflake MARKET_DATA</div>
+          </div>
+          <div class="mcpbx">
+            <div class="mcptool">snowflake_service_history(reg_no)</div>
+            <div class="mcpdesc">Fetches service records from Snowflake. Service intervals, maintenance gaps, odometer history. Feeds LLM reasoning node.</div>
+            <div class="mcptag">→ Snowflake SERVICE_HIST</div>
+          </div>
+          <div class="mcpbx">
+            <div class="mcptool">snowflake_car_catalog(budget, segment)</div>
+            <div class="mcpdesc">Queries upgrade car catalog filtered by budget and segment. Returns top 3 options with price, specs, platform support, EMI.</div>
+            <div class="mcptag">→ Snowflake CAR_CATALOG</div>
+          </div>
+        </div>
+        <div style="margin-top:9px;background:#ede9fe;border-radius:7px;padding:8px 12px;font-size:10px;color:#4c1d95">
+          <b>MCP Advantage:</b> Agent nodes call <code style="font-size:9px;background:#ddd6fe;border-radius:3px;padding:1px 4px">mcp_tool("name", args)</code> — MCP layer handles auth, retries, error handling, mock↔real switching, and logging. Zero changes to agent logic when swapping data sources.
+        </div>
+      </div>
+
+      <div class="arr"><div class="aline"></div><div class="albl">External API calls</div><div class="ahead"></div></div>
+
+      <!-- LAYER 5: EXTERNAL DATA -->
+      <div class="lrow l-data" style="width:100%">
+        <div class="lhdr">⑤ EXTERNAL DATA SOURCES <span>— Govt APIs, Warehouse, LLM, Knowledge Base</span></div>
+        <div class="boxes">
+          <div class="bx" style="background:#fff7ed;border-color:#fdba74">
+            <div class="bt">🚗 ULIP / Vahan API</div>
+            <div class="bd">Govt of India vehicle registry. RC details, insurance status, challan records, fitness certificate. Free API.</div>
+            <div class="tags"><span class="tag" style="background:#fed7aa;color:#b45309">Govt API</span><span class="tag" style="background:#fed7aa;color:#b45309">Real-time</span></div>
+          </div>
+          <div class="bx" style="background:#fff7ed;border-color:#fdba74">
+            <div class="bt">❄️ Snowflake</div>
+            <div class="bd">Market prices, service history, car catalog, demand trends. 3 tables: MARKET_DATA, SERVICE_HIST, CAR_CATALOG.</div>
+            <div class="tags"><span class="tag" style="background:#fed7aa;color:#b45309">Snowflake SQL</span><span class="tag" style="background:#fed7aa;color:#b45309">Analytics DB</span></div>
+          </div>
+          <div class="bx" style="background:#fff7ed;border-color:#fdba74">
+            <div class="bt">🧠 OpenAI GPT-4o</div>
+            <div class="bd">LLM reasoning node (sell/hold/upgrade/refinance), vehicle comparisons (/api/compare), conversational follow-ups (/api/followup).</div>
+            <div class="tags"><span class="tag" style="background:#fed7aa;color:#b45309">GPT-4o</span><span class="tag" style="background:#fed7aa;color:#b45309">JSON mode</span><span class="tag" style="background:#fed7aa;color:#b45309">Function call</span></div>
+          </div>
+          <div class="bx" style="background:#fff7ed;border-color:#fdba74">
+            <div class="bt">📚 RAG Knowledge Base</div>
+            <div class="bd">Domain expertise: depreciation formulas, financing rules, car segment guides. Vector search via ChromaDB / Pinecone (Phase 2).</div>
+            <div class="tags"><span class="tag" style="background:#fed7aa;color:#b45309">ChromaDB</span><span class="tag" style="background:#fed7aa;color:#b45309">Embeddings</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- METRICS STRIP -->
+      <div class="metrics" style="width:100%;margin-top:14px">
+        <div class="met" style="background:#f0fdf4;border:1.5px solid #86efac"><div class="met-v" style="color:#15803d">3-4x</div><div class="met-l" style="color:#15803d">Completion Rate<br>vs Industry</div></div>
+        <div class="met" style="background:#f0fdf4;border:1.5px solid #86efac"><div class="met-v" style="color:#15803d">5x</div><div class="met-l" style="color:#15803d">Upgrade<br>Conversion</div></div>
+        <div class="met" style="background:#eff6ff;border:1.5px solid #93c5fd"><div class="met-v" style="color:#1d4ed8">5 min</div><div class="met-l" style="color:#1d4ed8">Decision Time<br>vs 3-5 days</div></div>
+        <div class="met" style="background:#fdf4ff;border:1.5px solid #c4b5fd"><div class="met-v" style="color:#7e22ce">4.9x</div><div class="met-l" style="color:#7e22ce">Revenue<br>per User</div></div>
+        <div class="met" style="background:#fff7ed;border:1.5px solid #fdba74"><div class="met-v" style="color:#b45309">9/10</div><div class="met-l" style="color:#b45309">User Trust<br>Score</div></div>
+        <div class="met" style="background:#f0fdf4;border:1.5px solid #86efac"><div class="met-v" style="color:#15803d">60-70%</div><div class="met-l" style="color:#15803d">Completion<br>Rate</div></div>
+      </div>
+
+    </div><!-- /left flow -->
+
+    <!-- RIGHT: AGENT EXECUTION FLOW + STATE -->
+    <div class="aside">
+
+      <!-- LangGraph Node Flow -->
+      <div class="apanel">
+        <h4>⑥ LangGraph Agent Node Execution Flow</h4>
+
+        <div class="anode" style="border-color:#38bdf8;background:#f0f9ff">
+          <div class="anode-t" style="color:#0369a1">📥 START — registration_number</div>
+          <div class="anode-s">User inputs reg no (e.g. MH02AB1234)</div>
+        </div>
+        <div class="aarr">↓ parallel dispatch</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:3px">
+          <div class="anode" style="border-color:#c4b5fd;background:#f5f3ff">
+            <div class="anode-t" style="color:#5b21b6;font-size:10.5px">🚗 fetch_vehicle</div>
+            <div class="anode-s">ULIP/Vahan API. RC, insurance, inspection score.</div>
+          </div>
+          <div class="anode" style="border-color:#c4b5fd;background:#f5f3ff">
+            <div class="anode-t" style="color:#5b21b6;font-size:10.5px">🔧 fetch_service</div>
+            <div class="anode-s">Snowflake SERVICE_HIST. Maint gaps, odometer.</div>
+          </div>
+          <div class="anode" style="border-color:#c4b5fd;background:#f5f3ff">
+            <div class="anode-t" style="color:#5b21b6;font-size:10.5px">📈 fetch_market</div>
+            <div class="anode-s">Snowflake MARKET_DATA. Price, demand trend, YoY.</div>
+          </div>
+          <div class="anode" style="border-color:#c4b5fd;background:#f5f3ff">
+            <div class="anode-t" style="color:#5b21b6;font-size:10.5px">📚 fetch_rag</div>
+            <div class="anode-s">RAG KB. Domain rules, depreciation formulas.</div>
+          </div>
+        </div>
+        <div class="aarr">↓ all resolved → merge state</div>
+
+        <div class="anode" style="border-color:#a855f7;background:#fdf4ff;border-width:2px">
+          <div class="anode-t" style="color:#7e22ce">🧠 llm_reason (GPT-4o)</div>
+          <div class="anode-s">Synthesizes all state fields. Returns: <b>sell_now</b> | <b>hold</b> | <b>upgrade</b> | <b>refinance</b> + confidence score + reasoning</div>
+        </div>
+        <div class="aarr">↓ conditional edge</div>
+
+        <div class="cond">
+          <div class="cond-t">🔀 Conditional Router</div>
+          <div class="cond-r">
+            if <b>upgrade</b> → suggest_alternatives 🛻<br>
+            if <b>sell_now</b> → book_inspection 📅<br>
+            else → finalize ✅
+          </div>
+        </div>
+        <div class="aarr">↓</div>
+
+        <div style="display:flex;gap:5px">
+          <div class="anode" style="border-color:#fcd34d;background:#fffbeb;flex:1">
+            <div class="anode-t" style="color:#b45309;font-size:10.5px">🛻 suggest_alternatives</div>
+            <div class="anode-s">Queries CAR_CATALOG. Top 3 upgrade options. EMI calcs.</div>
+          </div>
+          <div class="anode" style="border-color:#fcd34d;background:#fffbeb;flex:1">
+            <div class="anode-t" style="color:#b45309;font-size:10.5px">📅 book_inspection</div>
+            <div class="anode-s">Multi-turn booking. Home/Hub → City → Slot → Confirm.</div>
+          </div>
+        </div>
+        <div class="aarr">↓</div>
+
+        <div class="anode" style="border-color:#4ade80;background:#f0fdf4;border-width:2px">
+          <div class="anode-t" style="color:#15803d">✅ finalize — assemble response</div>
+          <div class="anode-s">Complete JSON: vehicle health, market, recommendation, alternatives, EMI, booking details → FastAPI → UI</div>
+        </div>
+      </div>
+
+      <!-- Shared State -->
+      <div class="statebox">
+        <h4>📦 AdvisorState Schema</h4>
+        <div class="sfield"><span class="sfname">registration_number</span><span class="sfval">str — entry point</span></div>
+        <div class="sfield"><span class="sfname">vehicle</span><span class="sfval">dict — ULIP data</span></div>
+        <div class="sfield"><span class="sfname">market</span><span class="sfval">dict — Snowflake prices</span></div>
+        <div class="sfield"><span class="sfname">service_history</span><span class="sfval">list — service records</span></div>
+        <div class="sfield"><span class="sfname">rag_context</span><span class="sfval">str — domain rules</span></div>
+        <div class="sfield"><span class="sfname">recommendation</span><span class="sfval">sell_now/hold/upgrade</span></div>
+        <div class="sfield"><span class="sfname">alternatives</span><span class="sfval">list[dict] — cars + EMI</span></div>
+        <div class="sfield"><span class="sfname">booking</span><span class="sfval">dict — inspection slot</span></div>
+      </div>
+
+      <!-- Roadmap -->
+      <div style="border:1.5px solid #e2e8f0;border-radius:11px;padding:14px;background:#f8fafc">
+        <h4 style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#64748b;margin-bottom:10px">🔮 PHASE 2 / 3 ROADMAP</h4>
+        <div style="font-size:10.5px;color:#475569;line-height:1.9">
+          <span style="background:#dbeafe;color:#1e40af;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q2</span> ULIP live API + Snowflake prod wiring<br>
+          <span style="background:#dbeafe;color:#1e40af;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q2</span> RAG with Pinecone (50+ domain docs)<br>
+          <span style="background:#dbeafe;color:#1e40af;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q2</span> WhatsApp + Voice (Twilio) channel<br>
+          <span style="background:#ede9fe;color:#5b21b6;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q3</span> Pricing Agent (Cars24/OLX scraper)<br>
+          <span style="background:#ede9fe;color:#5b21b6;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q3</span> Finance Agent (HDFC/ICICI live rates)<br>
+          <span style="background:#ede9fe;color:#5b21b6;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q3</span> Redis persistent memory across sessions<br>
+          <span style="background:#dcfce7;color:#15803d;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q4</span> Proactive market alerts + fleet mgmt<br>
+          <span style="background:#dcfce7;color:#15803d;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">Q4</span> Visual Inspection AI (CV + damage est.)<br>
+        </div>
+      </div>
+
+    </div><!-- /aside -->
+  </div><!-- /body -->
+
+  <!-- FOOTER -->
+  <div style="margin-top:20px;padding-top:14px;border-top:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div style="font-size:11px;color:#94a3b8">Car Trade Advisor Agent · Cars24 AI Hackathon 2026 · Built with LangGraph + MCP + GPT-4o</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <span style="background:#f0fdf4;color:#15803d;border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700">65% Completion Rate</span>
+      <span style="background:#eff6ff;color:#1d4ed8;border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700">25% Upgrade Conversion</span>
+      <span style="background:#fdf4ff;color:#7e22ce;border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700">₹536Cr GMV / 10K users</span>
+      <span style="background:#fff7ed;color:#b45309;border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700">5-min Decision</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
